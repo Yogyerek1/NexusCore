@@ -1,0 +1,5 @@
+                    IPaymentService
+                          |
+            --------------------------
+            |                        |
+    StripePaymentService    PayPalPaymentService
