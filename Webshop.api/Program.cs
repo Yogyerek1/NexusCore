@@ -1,6 +1,8 @@
 using Webshop.api.Endpoints;
+using Webshop.api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddScoped<AuthService>();
 var app = builder.Build();
 
 app.MapAuthEndpoints();
