@@ -4,6 +4,9 @@ Users:
  - Email
  - Password (hashed)
  - Role
+ - IsVerified
+ - VerifyCode
+ - CodeExpiry
 
 Products:
  - Id
