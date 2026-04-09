@@ -143,7 +143,12 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
 
     public IResult Logout()
     {
-        Context.Response.Cookies.Delete("access_token");
+        Context.Response.Cookies.Delete("access_token", new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict
+        });
         return Results.Ok("Logged out successfully.");
     }
 
