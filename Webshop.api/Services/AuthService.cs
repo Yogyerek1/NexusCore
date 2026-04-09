@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.IdentityModel.Tokens;
 using Webshop.api.DTOs;
 using Webshop.api.Models;
@@ -42,7 +43,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
         // email code
         Console.WriteLine($"[REGISTRATION -> ACCOUNT VERIFICATION] Email sent to ({dto.Email}): {code}.");
 
-        return Results.Ok("Registration successfully! Please, check your email to verificate your account.");
+        return Results.Ok("Registration successful! Please check your email to verify your account!");
     }
 
     public async Task<IResult> Login(LoginDto dto)
@@ -70,8 +71,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
                 user.Id,
                 user.Username,
                 user.Email,
-                user.Role,
-                user.VerifyCode
+                user.Role
             }
         );
     }
@@ -101,11 +101,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
 
         user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
 
-        user.VerifyCode = null;
-        user.CodeExpiry = null;
-
-        await db.SaveChangesAsync();
-
+        await FinalizeVerification(user);
         return Results.Ok("Password has been reset successfully. You can now log in.");
     }
 
@@ -135,17 +131,14 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
         if (!string.IsNullOrWhiteSpace(dto.Email))
         {
             var emailExists = await db.Users.AnyAsync(u => u.Email == dto.Email && u.Id != user.Id);
-            if (emailExists) return Results.Conflict("Email is already in use.");
+            if (emailExists) return Results.Conflict("Email is already taken by another user.");
             user.Email = dto.Email;
         }
 
         if (!string.IsNullOrWhiteSpace(dto.Password)) user.Password = BCrypt.Net.BCrypt.HashPassword(dto.Password);
 
-        user.VerifyCode = null;
-        user.CodeExpiry = null;
-        await db.SaveChangesAsync();
-
-        return Results.Ok("Account updated successfully.");
+        await FinalizeVerification(user);
+        return Results.Ok("Profile updated.");
     }
 
     public IResult Logout()
@@ -158,41 +151,32 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-        if (user is null) return Results.NotFound("The user is not found.");
-        if (user.VerifyCode != dto.Code) return Results.BadRequest("Wrong code.");
-        if (user.CodeExpiry < DateTime.UtcNow) return Results.BadRequest("The code is expired.");
+        if (user is null || user.VerifyCode != dto.Code) return Results.BadRequest("Invalid verification code.");
+        if (user.CodeExpiry < DateTime.UtcNow) return Results.BadRequest("The code has expired.");
 
-        object responseMessage;
-
-        if (!user.IsVerified)
+        switch (dto.Purpose)
         {
-            // register verification
-            user.IsVerified = true;
-            responseMessage = new { Message = "Successfully account verification." };
-        }
-        else
-        {
-            // login verification
-            responseMessage = new
-            {
-                Message = "Successfully logged in.",
-                User = new
-                {
-                    user.Id,
-                    user.Username,
-                    user.Email,
-                    user.Role
-                }
-            };
-        }
+            case VerificationPurpose.Register:
+                user.IsVerified = true;
+                await FinalizeVerification(user);
+                return Results.Ok("Account verified successful! You can now log in.");
+            
+            case VerificationPurpose.Login:
+                if (!user.IsVerified) return Results.BadRequest("Account not verified yet.");
+                await FinalizeVerification(user);
+                GenerateJwtToken(user);
+                return Results.Ok(new { message = "Logged in successfully!", user.Username });
 
+            default:
+                return Results.BadRequest("Invalid verification purpose.");
+        }
+    }
+
+    private async Task FinalizeVerification(User user)
+    {
         user.VerifyCode = null;
         user.CodeExpiry = null;
         await db.SaveChangesAsync();
-
-        GenerateJwtToken(user);
-
-        return Results.Ok(responseMessage);
     }
 
     private void GenerateJwtToken(User user)

@@ -12,4 +12,6 @@ public class VerifyDto
     [Required]
     [MinLength(6)]
     public string Code { get; set; } = string.Empty;
+
+    public VerificationPurpose Purpose { get; set; }
 }
