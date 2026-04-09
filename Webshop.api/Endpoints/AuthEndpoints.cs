@@ -10,6 +10,8 @@ public static class AuthEndpoints
         app.MapPost("/auth/register", async (RegisterDto dto, AuthService authService) => await authService.Register(dto));
         app.MapPost("/auth/login", async (LoginDto dto, AuthService authService) => await authService.Login(dto));
         app.MapPost("/auth/verify", async (VerifyDto dto, AuthService authService) => await authService.VerifyCode(dto));
+        app.MapPost("/auth/forgot-password", (ForgotPasswordDto dto, AuthService authService) => authService.ForgotPassword(dto));
+        app.MapPost("/auth/reset-password", async (ResetPasswordDto dto, AuthService authService) => await authService.ResetPassword(dto));
         app.MapPost("/auth/me", async (AuthService authService) => await authService.Me()).RequireAuthorization();
         app.MapGet("/auth/logout", (AuthService authService) => authService.Logout());
     }

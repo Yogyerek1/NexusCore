@@ -10,7 +10,7 @@ namespace Webshop.api.Services;
 
 public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAccessor httpContextAccessor)
 {
-    private HttpContext Context => httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext is not available!");
+    private HttpContext Context => httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext is not available.");
     public async Task<IResult> Register(RegisterDto dto)
     {
         var exists = await db.Users.AnyAsync(u => u.Email == dto.Email);
@@ -33,9 +33,9 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
         await db.SaveChangesAsync();
 
         // email code
-        Console.WriteLine($"[REGISTRATION -> ACCOUNT VERIFICATION] Email sent to ({dto.Email}): {code}!");
+        Console.WriteLine($"[REGISTRATION -> ACCOUNT VERIFICATION] Email sent to ({dto.Email}): {code}.");
 
-        return Results.Ok("Registration successfully! Please, check your email to verificate your account!");
+        return Results.Ok("Registration successfully! Please, check your email to verificate your account.");
     }
 
     public async Task<IResult> Login(LoginDto dto)
@@ -50,7 +50,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
 
         await db.SaveChangesAsync();
 
-        Console.WriteLine($"[LOGIN 2FA] Email has been sent: {user.Email} - Code: {code}");
+        Console.WriteLine($"[LOGIN -> Verification] Email has been sent to ({user.Email}): {code}.");
         return Results.Ok("Please, check your email. The verification has been sent.");
     }
 
@@ -70,19 +70,54 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
         );
     }
 
+    public async Task<IResult> ForgotPassword(ForgotPasswordDto dto)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+        if (user is null) return Results.Ok("If this email exists, a reset code has been sent.");
+
+        var code = new Random().Next(100000, 999999).ToString();
+        user.VerifyCode = code;
+        user.CodeExpiry = DateTime.UtcNow.AddMinutes(10);
+
+        await db.SaveChangesAsync();
+
+        Console.WriteLine($"[PASSWORD RESET -> VERIFICATION] Email sent to ({user.Email}): {code}.");
+
+        return Results.Ok("If this email exists, a reset code has been sent.");
+    }
+
+    public async Task<IResult> ResetPassword(ResetPasswordDto dto)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+        if (user is null) return Results.BadRequest("Invalid request.");
+        if (user.VerifyCode != dto.Code) return Results.BadRequest("Wrong code.");
+        if (user.CodeExpiry < DateTime.UtcNow) return Results.BadRequest("The code is expired.");
+
+        user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+
+        user.VerifyCode = null;
+        user.CodeExpiry = null;
+
+        await db.SaveChangesAsync();
+
+        return Results.Ok("Password has been reset successfully. You can now log in.");
+    }
+
     public IResult Logout()
     {
         Context.Response.Cookies.Delete("access_token");
-        return Results.Ok("Logged out successfully!");
+        return Results.Ok("Logged out successfully.");
     }
 
     public async Task<IResult> VerifyCode(VerifyDto dto)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-        if (user is null) return Results.NotFound("The user is not found!");
-        if (user.VerifyCode != dto.Code) return Results.BadRequest("Wrong code!");
-        if (user.CodeExpiry < DateTime.UtcNow) return Results.BadRequest("The code is expired!");
+        if (user is null) return Results.NotFound("The user is not found.");
+        if (user.VerifyCode != dto.Code) return Results.BadRequest("Wrong code.");
+        if (user.CodeExpiry < DateTime.UtcNow) return Results.BadRequest("The code is expired.");
 
         object responseMessage;
 
@@ -90,14 +125,14 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
         {
             // register verification
             user.IsVerified = true;
-            responseMessage = new { Message = "Successfully account verification!" };
+            responseMessage = new { Message = "Successfully account verification." };
         }
         else
         {
             // login verification
             responseMessage = new
             {
-                Message = "Successfully logged in!",
+                Message = "Successfully logged in.",
                 User = new
                 {
                     user.Id,
@@ -119,7 +154,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
 
     private void GenerateJwtToken(User user)
     {
-        var jwtSecret = config["JWT_SECRET"] ?? throw new InvalidOperationException("JWT_SECRET not configured!");
+        var jwtSecret = config["JWT_SECRET"] ?? throw new InvalidOperationException("JWT_SECRET not configured.");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
