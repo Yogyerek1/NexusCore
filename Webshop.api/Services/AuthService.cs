@@ -11,12 +11,20 @@ namespace Webshop.api.Services;
 public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAccessor httpContextAccessor)
 {
     private HttpContext Context => httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext is not available.");
+
+    private async Task<string> SendCode(User user, int minutes)
+    {
+        var code = new Random().Next(100000, 999999).ToString();
+        user.VerifyCode = code;
+        user.CodeExpiry = DateTime.UtcNow.AddMinutes(minutes);
+        await db.SaveChangesAsync();
+
+        return code;
+    }
     public async Task<IResult> Register(RegisterDto dto)
     {
         var exists = await db.Users.AnyAsync(u => u.Email == dto.Email);
         if (exists) return Results.Conflict("This email is already taken.");
-
-        var code = new Random().Next(100000, 999999).ToString();
 
         var user = new User
         {
@@ -25,12 +33,10 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
             Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             Role = "Customer",
             IsVerified = false,
-            VerifyCode = code,
-            CodeExpiry = DateTime.UtcNow.AddMinutes(10)
         };
 
         db.Users.Add(user);
-        await db.SaveChangesAsync();
+        string code = await SendCode(user, 10);
 
         // email code
         Console.WriteLine($"[REGISTRATION -> ACCOUNT VERIFICATION] Email sent to ({dto.Email}): {code}.");
@@ -44,11 +50,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.Password)) return Results.Unauthorized();
 
-        var code = new Random().Next(100000, 999999).ToString();
-        user.VerifyCode = code;
-        user.CodeExpiry = DateTime.UtcNow.AddMinutes(5);
-
-        await db.SaveChangesAsync();
+        string code = await SendCode(user, 5);
 
         Console.WriteLine($"[LOGIN -> Verification] Email has been sent to ({user.Email}): {code}.");
         return Results.Ok("Please, check your email. The verification has been sent.");
@@ -57,7 +59,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
     public async Task<IResult> Me()
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == int.Parse(Context.User.FindFirst(ClaimTypes.NameIdentifier)!.Value));
-        if (user is null) return Results.Unauthorized();
+        if (user is null) return Results.NotFound("User not found.");
 
         return Results.Ok(
             new
@@ -76,11 +78,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
 
         if (user is null) return Results.Ok("If this email exists, a reset code has been sent.");
 
-        var code = new Random().Next(100000, 999999).ToString();
-        user.VerifyCode = code;
-        user.CodeExpiry = DateTime.UtcNow.AddMinutes(10);
-
-        await db.SaveChangesAsync();
+        string code = await SendCode(user, 10);
 
         Console.WriteLine($"[PASSWORD RESET -> VERIFICATION] Email sent to ({user.Email}): {code}.");
 
@@ -103,6 +101,42 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
         await db.SaveChangesAsync();
 
         return Results.Ok("Password has been reset successfully. You can now log in.");
+    }
+
+    public async Task<IResult> RequestUpdateCode()
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == int.Parse(Context.User.FindFirst(ClaimTypes.NameIdentifier)!.Value));
+        if (user is null) return Results.NotFound("User not found.");
+
+        string code = await SendCode(user, 5);
+        Console.WriteLine($"[UPDATE PROFILE -> VERIFICATION] Code sent to ({user.Email}): {code}.");
+
+        return Results.Ok("Verification code sent to your email.");
+    }
+
+    public async Task<IResult> Update(UpdateUserDto dto)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == int.Parse(Context.User.FindFirst(ClaimTypes.NameIdentifier)!.Value));
+        if (user is null) return Results.NotFound("User not found.");
+
+        if (user.VerifyCode != dto.Code || user.CodeExpiry < DateTime.UtcNow) return Results.BadRequest("Invalid or expired verification code.");
+
+        if (!string.IsNullOrWhiteSpace(dto.Username)) user.Username = dto.Username;
+
+        if (!string.IsNullOrWhiteSpace(dto.Email))
+        {
+            var emailExists = await db.Users.AnyAsync(u => u.Email == dto.Email && u.Id != user.Id);
+            if (emailExists) return Results.Conflict("Email is already in use.");
+            user.Email = dto.Email;
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.Password)) user.Password = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+
+        user.VerifyCode = null;
+        user.CodeExpiry = null;
+        await db.SaveChangesAsync();
+
+        return Results.Ok("Account updated successfully.");
     }
 
     public IResult Logout()
