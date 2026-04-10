@@ -1,7 +1,13 @@
 IDENTITY (auth):
  - POST /auth/register (Guest)
  - POST /auth/login (Guest)
- - GET /auth/profile (User/Admin)
+ - POST /auth/verify (Guest)
+ - POST /auth/forgot-password (Guest)
+ - POST /auth/reset-password (Guest)
+ - POST /auth/request-update (User/Admin)
+ - PUT /auth/update (User/Admin)
+ - POST /auth/me (User/Admin)
+ - GET /auth/logout (User/Admin)
 
 PRODUCTS (Catalog):
  - GET /products (Guest/User/Admin)
