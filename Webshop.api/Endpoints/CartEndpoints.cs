@@ -6,7 +6,7 @@ public static class CartEndpoints
 {
     public static void MapCartEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/cart").RequireAuthorization("CustomerOnly");
+        var group = app.MapGroup("/cart").RequireAuthorization("CustomerLevel");
 
         group.MapGet("/", () => {});
         group.MapPost("/items", () => {});

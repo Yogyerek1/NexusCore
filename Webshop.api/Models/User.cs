@@ -23,7 +23,7 @@ public class User
     public string Password { get; set; } = string.Empty;
 
     [Required]
-    [RegularExpression("^(Customer|Admin)$")]
+    [RegularExpression("^(Customer|Admin|SuperAdmin)$")]
     public string Role { get; set; } = "Customer";
 
     public bool IsVerified { get; set; } = false;

@@ -14,15 +14,15 @@ public static class AuthEndpoints
         app.MapPost("/auth/reset-password", async (ResetPasswordDto dto, AuthService authService) => await authService.ResetPassword(dto));
 
         app.MapPost("/auth/request-update", async (AuthService authService) => await authService.RequestUpdateCode())
-            .RequireAuthorization("CustomerOnly");
+            .RequireAuthorization("CustomerLevel");
 
         app.MapPut("/auth/update", async (UpdateUserDto dto, AuthService authService) => await authService.Update(dto))
-            .RequireAuthorization("CustomerOnly");
+            .RequireAuthorization("CustomerLevel");
 
         app.MapPost("/auth/me", async (AuthService authService) => await authService.Me())
-            .RequireAuthorization("CustomerOnly");
+            .RequireAuthorization("CustomerLevel");
 
         app.MapGet("/auth/logout", (AuthService authService) => authService.Logout())
-            .RequireAuthorization("CustomerOnly");
+            .RequireAuthorization("CustomerLevel");
     }
 }

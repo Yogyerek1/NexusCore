@@ -11,12 +11,12 @@ public static class ProductsEndpoints
         app.MapGet("/products/{id}", (int id, ProductService productService) => productService.GetProduct());
 
         app.MapPost("/products", (ProductService productService) => productService.NewProduct())
-            .RequireAuthorization("AdminOnly");
+            .RequireAuthorization("AdminLevel");
 
         app.MapPut("/products/{id}", (int id, ProductService productService) => productService.UpdateProduct())
-            .RequireAuthorization("AdminOnly");
+            .RequireAuthorization("AdminLevel");
 
         app.MapDelete("/products/{id}", (int id, ProductService productService) => productService.DeleteProduct())
-            .RequireAuthorization("AdminOnly");
+            .RequireAuthorization("AdminLevel");
     }
 }

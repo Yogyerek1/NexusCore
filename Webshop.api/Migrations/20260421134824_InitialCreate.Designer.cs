@@ -12,7 +12,7 @@ using Webshop.api.Models;
 namespace Webshop.api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260409131054_InitialCreate")]
+    [Migration("20260421134824_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

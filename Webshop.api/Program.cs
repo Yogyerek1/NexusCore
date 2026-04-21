@@ -37,10 +37,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
+
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("CustomerOnly", policy => policy.RequireRole("Admin", "Customer"));
+    options.AddPolicy("SuperAdminOnly", policy => policy.RequireRole("SuperAdmin"));
+    options.AddPolicy("AdminLevel", policy => policy.RequireRole("SuperAdmin", "Admin"));
+    options.AddPolicy("CustomerLevel", policy => policy.RequireRole("SuperAdmin", "Admin", "Customer"));
 });
 
 // DB connection
