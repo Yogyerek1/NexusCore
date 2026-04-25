@@ -29,6 +29,7 @@ public class ProductService(AppDbContext db, IHttpContextAccessor httpContextAcc
                 StockQuantity = p.StockQuantity,
                 DiscountPercentage = p.DiscountPercentage
             })
+            .AsNoTracking()
             .ToListAsync();
         
         return Results.Ok(products);
