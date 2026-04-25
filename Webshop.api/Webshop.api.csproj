@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <Folder Include="DTOs/CartItemDTOs/" />
+    <Folder Include="DTOs/OrderDTOs/" />
     <Folder Include="DTOs/ProductDTOs/" />
   </ItemGroup>
 

@@ -60,6 +60,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         $"Password={config["DB_PASSWORD"]};"
     ));
 
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+{
+    options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+});
+
 builder.Services.AddValidation();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<HelperService>();
@@ -67,6 +72,7 @@ builder.Services.AddScoped<MailService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CartService>();
+builder.Services.AddScoped<OrderService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

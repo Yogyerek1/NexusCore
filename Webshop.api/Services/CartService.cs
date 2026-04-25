@@ -14,23 +14,19 @@ public class CartService(AppDbContext db, HelperService helperService)
 
         var cartItems = await db.CartItems
             .Where(c => c.UserId == user.Id)
-            .Include(c => c.Product)
-            .Select(c => new
-            {
+            .Select(c => new CartItemDto(
                 c.Id,
+                c.ProductId,
+                c.Product.Name,
+                c.Product.Price,
                 c.Quantity,
-                Product = new
-                {
-                    c.Product.Name,
-                    c.Product.Price,
-                    c.Product.Description,
-                    TotalLinePrice = c.Product.Price * c.Quantity
-                }
-            })
+                c.Product.Price * c.Quantity
+            ))
             .ToListAsync();
         
         return Results.Ok(cartItems);
     }
+    
     public async Task<IResult> NewItem(NewCartItemDto dto)
     {
         var user = await helperService.GetUserAsync();
@@ -92,6 +88,7 @@ public class CartService(AppDbContext db, HelperService helperService)
         return Results.Ok("Cart updated.");
         
     }
+
     public async Task<IResult> DeleteItem(int Id)
     {
         var user = await helperService.GetUserAsync();
