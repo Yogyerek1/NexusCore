@@ -147,10 +147,13 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
     {
         var currentUserId = Context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         var adminUser = await db.Users.FindAsync(int.Parse(currentUserId!));
+        var targetUser = await db.Users.FirstOrDefaultAsync(u => u.Email == dto.TargetUserEmail);
 
         if (adminUser is null || adminUser.Role != "SuperAdmin")
             return Results.Json(new { message = "Forbidden: Only SuperAdmins can change roles." }, statusCode: 403);
         
+        if (targetUser is null) return Results.NotFound("Target user not found.");
+
         if (string.IsNullOrWhiteSpace(dto.Code))
         {
             string code = await SendCode(adminUser, 5);
@@ -162,7 +165,6 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
         if (adminUser.VerifyCode != dto.Code || adminUser.CodeExpiry < DateTime.UtcNow)
             return Results.BadRequest("Invalid or expired 2FA code.");
 
-        var targetUser = await db.Users.FirstOrDefaultAsync(u => u.Email == dto.TargetUserEmail);
         if (targetUser is null) return Results.NotFound("Target user not found.");
 
         if (dto.NewRole != "Admin" && dto.NewRole != "Customer" && dto.NewRole != "SuperAdmin")

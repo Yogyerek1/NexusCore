@@ -19,8 +19,7 @@ public static class AuthEndpoints
         app.MapPut("/auth/update", async (UpdateUserDto dto, AuthService authService) => await authService.Update(dto))
             .RequireAuthorization("CustomerLevel");
 
-        app.MapPost("/auth/me", async (AuthService authService) => await authService.Me())
-            .RequireAuthorization("CustomerLevel");
+        app.MapPost("/auth/me", async (AuthService authService) => await authService.Me());
 
         app.MapGet("/auth/logout", (AuthService authService) => authService.Logout())
             .RequireAuthorization("CustomerLevel");
