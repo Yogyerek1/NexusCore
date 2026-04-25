@@ -62,6 +62,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddValidation();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<HelperService>();
 builder.Services.AddScoped<MailService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ProductService>();

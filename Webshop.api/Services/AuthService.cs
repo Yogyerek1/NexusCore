@@ -9,7 +9,7 @@ using Webshop.api.Models;
 
 namespace Webshop.api.Services;
 
-public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAccessor httpContextAccessor, MailService mailService)
+public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAccessor httpContextAccessor, MailService mailService, HelperService helperService)
 {
     private HttpContext Context => httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext is not available.");
 
@@ -64,8 +64,8 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
 
     public async Task<IResult> Me()
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == int.Parse(Context.User.FindFirst(ClaimTypes.NameIdentifier)!.Value));
-        if (user is null) return Results.NotFound("User not found.");
+        var user = await helperService.GetUserAsync();
+        if (user is null) return Results.Unauthorized();
 
         return Results.Ok(
             new
@@ -145,8 +145,9 @@ public class AuthService(AppDbContext db, IConfiguration config, IHttpContextAcc
 
     public async Task<IResult> ChangeUserRole(ChangeRoleDto dto)
     {
-        var currentUserId = Context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        var adminUser = await db.Users.FindAsync(int.Parse(currentUserId!));
+        var currentUser = await helperService.GetUserAsync();
+        if (currentUser is null) return Results.Unauthorized();
+        var adminUser = await db.Users.FindAsync(currentUser.Id);
         var targetUser = await db.Users.FirstOrDefaultAsync(u => u.Email == dto.TargetUserEmail);
 
         if (adminUser is null || adminUser.Role != "SuperAdmin")
