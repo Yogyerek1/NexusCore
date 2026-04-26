@@ -78,7 +78,11 @@ public class OrderService(AppDbContext db, HelperService helperService)
                 }).ToList()
             };
 
-            return Results.Ok(new { Order = response, Message = "Order successfully created." });
+            return Results.Ok(new
+            {
+                Message = "Order placed successfully.",
+                OrderId = order.Id
+            });
         }
         catch (Exception ex)
         {

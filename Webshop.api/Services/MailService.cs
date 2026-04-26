@@ -39,7 +39,7 @@ public class MailService(IConfiguration config) : IMailService
     {
         var email = new MimeMessage();
 
-        var MAIL_HOST = config["MAIL_HOST"] ?? throw new InvalidOperationException("MAIL_HOST configuratuion is missing.");
+        var MAIL_HOST = config["MAIL_HOST"] ?? throw new InvalidOperationException("MAIL_HOST configuration is missing.");
         var MAIL_DISPLAY_NAME = config["MAIL_DISPLAY_NAME"] ?? throw new InvalidOperationException("MAIL_DISPLAY_NAME configuration is missing.");
         var MAIL_MAIL = config["MAIL_EMAIL"] ?? throw new InvalidOperationException("MAIL_EMAIL configuration is missing.");
         var MAIL_PORT = config["MAIL_PORT"] ?? "587";
