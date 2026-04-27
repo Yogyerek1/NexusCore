@@ -16,6 +16,7 @@
 | :--- | :--- |
 | ⚙️ **Backend** | .NET 10 (ASP.NET Core Minimal API) |
 | 🗄️ **Database** | PostgreSQL |
+| 🐳 **Infrastructure** | Docker & Docker Compose |
 | ⚛️ **Frontend** | React + TypeScript |
 | 🛡️ **Auth & Security** | JWT with HttpOnly Cookies |
 
@@ -39,6 +40,35 @@
 * **🛡️ Maximum Security:** Protection against common web attacks and secure data management.
 * **🤝 User-friendly Interface:** Ease of use for both customers and developers.
 * **⚡ Customizability:** An architecture where changing the design does not require modifying code deep within the system.
+
+---
+
+### 🚀 How to use (Installation)
+
+Follow these steps to get your own NexusCore instance running locally using Docker.
+
+#### 1. Prepare Environment Variables
+Before starting the containers, you need to create a `.env` file based on the provided example.
+
+#### 2. Start the Infrastructure
+Use Docker Compose to build and start the API and the Database in the background.
+
+```bash
+docker compose up -d --build
+```
+
+#### 3. Database Migration
+Once the containers are running, you need to apply the migrations to set up the database schema.
+
+```bash
+# Ensure you have dotnet-ef tools installed
+dotnet ef database update
+```
+
+#### 4. Access the API
+The API will be available at http://localhost:5000 (or the port specified in your .env).
+You can explore the endpoints using the built-in Swagger UI (in development mode):
+http://localhost:5000/swagger/index.html
 
 ---
 <p align="center">
