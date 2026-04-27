@@ -66,9 +66,16 @@ dotnet ef database update
 ```
 
 #### 4. Access the API
+Use Docker Compose to start the API and the Database in the background.
+
+```bash
+# Use Docker Compose to start the API and the Database in the background.
+docker compose up -d
+```
+
 The API will be available at http://localhost:5000 (or the port specified in your .env).
 You can explore the endpoints using the built-in Swagger UI (in development mode):
-http://localhost:5000/swagger/index.html
+http://localhost:5000/swagger
 
 ---
 <p align="center">
