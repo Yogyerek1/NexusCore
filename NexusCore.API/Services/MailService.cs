@@ -15,7 +15,7 @@ public class MailService(IConfiguration config) : IMailService
 {
     private async Task<string> GetTemplateAsync(string templateName, Dictionary<string, string> placeholders)
     {
-        var path = Path.Combine(Directory.GetCurrentDirectory(), "Templates", $"{templateName}.html");
+        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Templates", $"{templateName}.html");
         if (!File.Exists(path)) throw new FileNotFoundException("Template not found.");
 
         string html = await File.ReadAllTextAsync(path);
