@@ -20,7 +20,7 @@ public class CartService(AppDbContext db, HelperService helperService)
                 c.Product.Name,
                 c.Product.Price,
                 c.Quantity,
-                c.Product.Price * c.Quantity
+                (c.Product.Price * (100m - c.Product.DiscountPercentage) / 100m) * c.Quantity
             ))
             .ToListAsync();
         
@@ -37,22 +37,39 @@ public class CartService(AppDbContext db, HelperService helperService)
 
         if (product.StockQuantity < dto.Quantity) return Results.BadRequest($"Only {product.StockQuantity} items in stock.");
 
-        var existingItem = await db.CartItems
-            .FirstOrDefaultAsync(c => c.UserId == user.Id && c.ProductId == dto.ProductId);
-        
-        if (existingItem != null) return Results.BadRequest($"{existingItem.Product.Name} is already exists in your cart.");
+        using var transaction = await db.Database.BeginTransactionAsync();
+        try
+        {  
+            var existingItem = await db.CartItems
+                .FirstOrDefaultAsync(c => c.UserId == user.Id && c.ProductId == dto.ProductId);
+            
+            if (existingItem != null)
+            {
+                int newQuantity = existingItem.Quantity + dto.Quantity;
 
-        var cartItem = new CartItem
+                if (product.StockQuantity < newQuantity) return Results.BadRequest($"Only {product.StockQuantity} items in stock. You already have {existingItem.Quantity} in cart.");
+
+                existingItem.Quantity = newQuantity;
+            } else
+            {
+                var cartItem = new CartItem
+                {
+                    UserId = user.Id,
+                    ProductId = dto.ProductId,
+                    Quantity = dto.Quantity
+                };
+                db.CartItems.Add(cartItem);
+            }
+
+            await db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return Results.Ok("Item added to cart.");
+        }
+        catch
         {
-            UserId = user.Id,
-            ProductId = dto.ProductId,
-            Quantity = dto.Quantity
-        };
-        db.CartItems.Add(cartItem);
-
-        await db.SaveChangesAsync();
-        
-        return Results.Ok("Item added to cart.");
+            await transaction.RollbackAsync();
+            return Results.Problem("Error updating cart.");
+        }
     }
 
     public async Task<IResult> UpdateItem(UpdateCartItem dto)

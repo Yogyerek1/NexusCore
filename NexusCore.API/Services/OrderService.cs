@@ -25,6 +25,10 @@ public class OrderService(AppDbContext db, HelperService helperService)
 
         try
         {
+            var existingOrder = await db.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.UserId == user.Id && o.Status == "Pending");
+
             decimal totalAmount = 0;
             var orderItems = new List<OrderItem>();
 
@@ -36,52 +40,58 @@ public class OrderService(AppDbContext db, HelperService helperService)
                 }
 
                 item.Product.StockQuantity -= item.Quantity;
+                
+                decimal discountedPrice = (item.Product.Price * (100m - item.Product.DiscountPercentage) / 100m);
 
-                orderItems.Add(new OrderItem
+                var existingOrderItem = existingOrder?.OrderItems
+                    .FirstOrDefault(oi => oi.ProductId == item.ProductId);
+                
+                if (existingOrder != null) existingOrderItem?.Quantity += item.Quantity;
+                else
                 {
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity,
-                    Price = item.Product.Price
-                });
+                    var newItem = new OrderItem
+                    {
+                        ProductId = item.ProductId,
+                        Quantity = item.Quantity,
+                        Price = discountedPrice
+                    };
+                    
+                    if (existingOrder != null)
+                        existingOrder.OrderItems.Add(newItem);
+                    else
+                        orderItems.Add(newItem);
+                }
 
-                totalAmount += item.Product.Price * item.Quantity;
+                totalAmount += (item.Product.Price * (100m - item.Product.DiscountPercentage) / 100m) * item.Quantity;
             }
 
-            var order = new Order
+            if (existingOrder != null)
             {
-                UserId = user.Id,
-                OrderDate = DateTime.UtcNow,
-                TotalAmount = totalAmount,
-                Status = "Pending",
-                OrderItems = orderItems
-            };
+                existingOrder.OrderItems.AddRange(orderItems);
+                existingOrder.TotalAmount += totalAmount;
+                existingOrder.OrderDate = DateTime.UtcNow;
+            } else
+            {
+                var order = new Order
+                {
+                    UserId = user.Id,
+                    OrderDate = DateTime.UtcNow,
+                    TotalAmount = totalAmount,
+                    Status = "Pending",
+                    OrderItems = orderItems
+                };
 
-            db.Orders.Add(order);
+                db.Orders.Add(order);   
+            }
 
             db.CartItems.RemoveRange(cartItems);
 
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            var response = new OrderDto
-            {
-                Id = order.Id,
-                CustomerName = user.Username,
-                OrderDate = order.OrderDate,
-                TotalAmount = order.TotalAmount,
-                Status = order.Status,
-                OrderItems = order.OrderItems.Select(oi => new OrderItemDto
-                {
-                    ProductId = oi.ProductId,
-                    Quantity = oi.Quantity,
-                    Price = oi.Price
-                }).ToList()
-            };
-
             return Results.Ok(new
             {
-                Message = "Order placed successfully.",
-                OrderId = order.Id
+                Message = existingOrder != null ? "Order updated." : "Order placed successfully."
             });
         }
         catch (Exception ex)
@@ -175,7 +185,7 @@ public class OrderService(AppDbContext db, HelperService helperService)
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            return Results.Ok(new { Message = $"The {Id}. order deleted." });
+            return Results.Ok(new { Message = $"Order deleted." });
         }
         catch (Exception ex)
         {
