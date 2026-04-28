@@ -44,7 +44,7 @@ public class OrderService(AppDbContext db, HelperService helperService)
                     Price = item.Product.Price
                 });
 
-                totalAmount += item.Product.Price * item.Quantity;
+                totalAmount += (item.Product.Price * (100m - item.Product.DiscountPercentage) / 100m) * item.Quantity;
             }
 
             var order = new Order
